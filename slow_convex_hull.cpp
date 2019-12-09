@@ -39,10 +39,10 @@ bool cmp(const Point &a, const Point &b) {
 VP slow_convex_hull(VP P){
     VP ret = {};
     for (int i = 0; i < P.size(); i++){
-        for (int j = 0; j < P.size(); j++){
+        for (int j = 0; j < P.size(); j++){ //  enumerate all pairs
             if (i == j) continue;
             bool valid = 1;
-            for (int r = 0; r < P.size(); r++){
+            for (int r = 0; r < P.size(); r++){ //  check whether all points in the same side
                 if (r == i || r == j) continue;
                 if (lies_left(P[i], P[j], P[r])) {
                     valid = 0;
@@ -53,12 +53,11 @@ VP slow_convex_hull(VP P){
         }
     }
     origin = ret[0];
-    cout << origin.x << " " << origin.y << endl;
-    sort(ret.begin(), ret.end(), cmp);
+    sort(ret.begin(), ret.end(), cmp);  //  sort points in counter-clockwise order
     VP res = {}; 
     res.push_back(ret[0]);
     for (int i = 1; i < ret.size(); i++){
-       if (!(ret[i] == ret[i - 1])) res.push_back(ret[i]); 
+       if (!(ret[i] == ret[i - 1])) res.push_back(ret[i]);  // remove duplicates 
     }
     return res;
 }

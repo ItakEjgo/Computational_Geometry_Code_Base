@@ -14,8 +14,8 @@ struct Point{
     Point(double x, double y):x(x), y(y){}
     Point operator + (const Point &p) const { return Point(x + p.x, y + p.y); }
     Point operator - (const Point &p) const { return Point(x - p.x, y - p.y); }
-    double operator ^ (const Point &p) const { return x * p.y - y * p.x; }
-    double operator * (const Point &p) const { return x * p.x + y * p.y; }
+    double operator ^ (const Point &p) const { return x * p.y - y * p.x; }  //  cross product
+    double operator * (const Point &p) const { return x * p.x + y * p.y; }  //  inner product
     bool operator < (const Point &p) const{ return x < p.x || x == p.x && y < p.y; }
 };
 
@@ -35,22 +35,19 @@ bool cmp(const pii &a, const pii &b) {
 }
 
 VP convex_hull(VP P){
-    sort(P.begin(), P.end());
+    sort(P.begin(), P.end());  //   sort all points
     VP ret = {};
     int sz = 0;
-    for (int i = 0; i < P.size(); i++) {
-        cout << "xx: " << P[i].x << " " << P[i].y << endl;
+    for (int i = 0; i < P.size(); i++) { // upper hull
         while (sz > 1 && !lies_left(ret[sz - 2], P[i], ret[sz - 1])) {
             ret.pop_back();
             sz--;
         }
-        cout << "push in: " << P[i].x << " " << P[i].y << endl;
         ret.push_back(P[i]);
         sz++;
     }
     int k = sz;
-    for (int i = P.size() - 2; i >= 0; i--){
-        cout << "yy: " << P[i].x << " " << P[i].y << endl;
+    for (int i = P.size() - 2; i >= 0; i--){ // lower hull
         while (sz > k && !lies_left(ret[sz - 2], P[i], ret[sz - 1])) {
             ret.pop_back();
             sz--;
@@ -59,7 +56,6 @@ VP convex_hull(VP P){
         sz++;
     }
     ret.pop_back();
-    sz--;
     return ret;
 }
 
