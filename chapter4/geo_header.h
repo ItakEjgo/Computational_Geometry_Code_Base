@@ -108,3 +108,9 @@ private:
 };
 
 Line halfplane_boundary(HalfPlane &h);
+
+Point objective_function_projection(Point &p, HalfPlane &h); // project p to h
+
+HalfPlane dimension_reduce(HalfPlane &hj, HalfPlane &h, int pflag); // reduce dimension with respect to dimension pflag
+
+Point dimension_reduce(Point &p, HalfPlane &h, int pflag); // reduce dimension with respect to dimension pflag

@@ -2,6 +2,7 @@
 #include <vector>
 #include "geo_header.h"
 #include <fstream>
+#include <algorithm>
 
 using namespace std;
 
@@ -10,7 +11,7 @@ vector<HalfPlane> H;
 
 int main()
 {
-	ifstream fin("input.txt");
+	ifstream fin("input1.txt");
 
 	int d, n;
 	fin >> d >> n;
@@ -19,8 +20,8 @@ int main()
 		vector<double> a(d, 0);
 		a[i] = 1.0;
 		double b = INF;
-		Point p = Point(2, a);
-		HalfPlane hp = HalfPlane(2, p, b);
+		Point p = Point(d, a);
+		HalfPlane hp = HalfPlane(d, p, b);
 		H.push_back(hp);
 	}
 
@@ -28,8 +29,8 @@ int main()
 		vector<double> a(d, 0);
 		a[i] = -1.0;
 		double b = INF;
-		Point p = Point(2, a);
-		HalfPlane hp = HalfPlane(2, p, b);
+		Point p = Point(d, a);
+		HalfPlane hp = HalfPlane(d, p, b);
 		H.push_back(hp);
 	}
 
@@ -39,8 +40,8 @@ int main()
 		for (int j = 0; j < d; j++) 
 			fin >> a[j];
 		fin >> b;
-		Point p = Point(2, a);
-		HalfPlane hp = HalfPlane(2, p, b);
+		Point p = Point(d, a);
+		HalfPlane hp = HalfPlane(d, p, b);
 		H.push_back(hp);
 	}
 	
@@ -50,8 +51,9 @@ int main()
 	}
 	Point O = Point(d, a);
 	
+	// random_shuffle(H.begin() + 2 * d, H.end());
 
-	LinearProgramming LP = LinearProgramming(2, H, O);
+	LinearProgramming LP = LinearProgramming(d, H, O);
 	vector<Point> res = LP.solve();
 	if (!res.size()) {
 		cout << "Infeasible" << endl;

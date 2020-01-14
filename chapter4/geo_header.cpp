@@ -177,6 +177,55 @@ Line halfplane_boundary(HalfPlane &h) {
 	return ret;
 }
 
+Point objective_function_projection(Point &p, HalfPlane &h) {
+	int dim = p.get_dim();
+	Point ret;
+	std::vector<double> ret_a(dim, 0);
+	double t = p * h.a;
+	if (!sign(t)) {
+		Point c(dim);
+		for (int i = 0; i < dim; i++) {
+			c.val[i] = -1;
+			t = c * h.a;
+			if (sign(t) != 0) break;
+			c.val[i] = 0;
+		}
+		for (int i = 0; i < dim; i++) {
+			ret_a[i] = c.val[i] - t * h.a.val[i];
+		}
+	}
+	else {
+		for (int i = 0; i < dim; i++) {
+			ret_a[i] = p.val[i] - t * h.a.val[i];
+		}
+	}
+	ret = Point(dim, ret_a);
+	return ret;
+}
+
+HalfPlane dimension_reduce(HalfPlane &hj, HalfPlane &h, int pflag) {
+	int dim = hj.get_dim();
+	std::vector<double> tmp_a;
+	double ret_b = hj.b; 
+	if (sign(hj.a.val[pflag]) != 0) ret_b -= hj.a.val[pflag]* h.b / h.a.val[pflag];;
+	for (int i = 0; i < dim; i++)
+		if (i != pflag)
+			tmp_a.push_back(hj.a.val[i] - hj.a.val[pflag] * h.a.val[i] / h.a.val[pflag]);
+	Point ret_a = Point(dim - 1, tmp_a);
+	HalfPlane ret = HalfPlane(dim - 1, ret_a, ret_b);
+	return ret;
+}
+
+Point dimension_reduce(Point &p, HalfPlane &h, int pflag) {
+	int dim = p.get_dim();
+	std::vector<double> tmp_a;
+	for (int i = 0; i < dim; i++) 
+		if (i != pflag) 
+			tmp_a.push_back(p.val[i] - p.val[pflag] * h.a.val[i] / h.a.val[pflag]);
+	Point ret = Point(dim - 1, tmp_a);
+	return ret;
+}
+
 
 #pragma endregion
 
@@ -204,9 +253,9 @@ std::vector<Point> LinearProgramming::solve() {
 		double x_left = -INF, x_right = INF;
 		for (int i = 0; i < H.size(); i++) {
 			if (sign(H[i].a.val[0]) < 0) 
-				x_left = std::max(x_left, -1.0 * H[i].b);
+				x_left = std::max(x_left, H[i].b / H[i].a.val[0]);
 			else if (sign(H[i].a.val[0]) > 0)
-				x_right = std::min(x_right, H[i].b);
+				x_right = std::min(x_right, H[i].b / H[i].a.val[0]);
 			else if (sign(H[i].b) < 0) return ret;
 		}
 		if (sign(x_left - x_right) > 0) return ret;
@@ -220,7 +269,7 @@ std::vector<Point> LinearProgramming::solve() {
 			ret.push_back(Point(dim, v));
 		}
 	}
-	else {
+	else if (dim == -1) {
 		std::vector<double> corner(dim, INF);
 		Point v = Point(dim, corner);
 		for (int i = 2 * dim; i < H.size(); i++) {
@@ -232,7 +281,7 @@ std::vector<Point> LinearProgramming::solve() {
 				
 				std::vector<HalfPlane> new_H = {};
 				Point new_O;
-				std::vector<double> tmp(1, -1.0);
+				std::vector<double> tmp(1, -1.0); 
 				Point bound_left = Point(1, tmp);
 				tmp[0] = 1.0;
 				Point bound_right = Point(1, tmp);
@@ -255,6 +304,7 @@ std::vector<Point> LinearProgramming::solve() {
 					else
 						new_H.push_back(HalfPlane(dim - 1, bound_right, inter.val[0]));	
 				}
+
 				if (sign(H[i].a.val[1]) != 0) {
 					double x = O.val[0] - O.val[1] * H[i].a.val[0] / H[i].a.val[1];
 					std::vector<double> tmp_v = {}; tmp_v.push_back(x);
@@ -280,6 +330,62 @@ std::vector<Point> LinearProgramming::solve() {
 						v_tmp[1] = (H[i].b - H[i].a.val[0] * v_tmp[0]) / H[i].a.val[1];
 					}
 					v = Point(dim, v_tmp);
+				}
+			}
+		}
+		ret.push_back(v);
+	}
+	else {
+		std::vector<double> corner(dim);
+		for (int i = 0; i < dim; i++) {
+			if (sign(O.val[i]) >= 0)
+				corner[i] = INF;
+			else
+				corner[i] = -INF;
+		}
+		Point v = Point(dim, corner);
+		for (int i = 2 * dim; i < H.size(); i++) {
+			if (sign(H[i].a * v - H[i].b) <= 0) {
+				continue;
+			}
+			else {
+				HalfPlane h = H[i];
+				std::vector<HalfPlane> new_H;
+				Point new_O;
+
+				int pflag = -1;
+				for (int j = 0; j < dim; j++) 
+					if (sign(h.a.val[j]) != 0) {
+						pflag = j;
+						break;
+					}
+				
+				assert(pflag >= 0);
+				for (int j = 0; j < i; j++) {
+					HalfPlane hj = H[j];
+					new_H.push_back(dimension_reduce(hj, h, pflag));
+				}
+
+				Point p = objective_function_projection(O, h);
+				new_O = dimension_reduce(p, h, pflag);
+				
+				LinearProgramming new_LP = LinearProgramming(dim - 1, new_H, new_O);
+				std::vector<Point> vi = new_LP.solve();
+				if (!vi.size()) return ret;
+				else {
+					assert(vi.size() == 1);
+					std::vector<double> tmp_v(dim);
+					double tmp_val = 0;
+					int t = 0;
+					for (int j = 0, pos = 0; j < dim; j++)
+						if (j != pflag) {
+							tmp_v[j] = vi[0].val[pos];
+							tmp_val += h.a.val[j] * vi[0].val[pos];
+							pos++;
+						}
+					
+					tmp_v[pflag] = (h.b - tmp_val) / h.a.val[pflag];
+					v = Point(dim, tmp_v);
 				}
 			}
 		}
